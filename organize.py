@@ -1,26 +1,44 @@
 import pathlib
 import shutil
 import argparse
+import json
 
-def get_file_folder(item):
+
+
+def load_rules(config_path: str) -> dict:
+    """Load file organization rules from a JSON file.
+    Args:        
+        file_path (str): The path to the JSON file containing rules.
+    Returns:
+        dict: A dictionary containing the file organization rules.
+        """
+    try:
+        with open(config_path, 'r') as file:
+            rules = json.load(file)
+    except FileNotFoundError:
+        print(f"Configuration file {config_path} not found. Using default rules.")
+        return {}
+    except json.JSONDecodeError:
+        print(f"Error decoding JSON from {config_path}. Using default rules.")
+        return {}
+    #Inverting the rules to a mapping of extensions to folder names
+    inverted_rules = {}
+    for folder_name, extensions in rules.items():
+        for ext in extensions:
+            inverted_rules[ext.lower()] = folder_name
+    return inverted_rules
+
+
+def get_file_folder(item,rules: dict ):
     """Determine the folder name based on the file extension.
     Args:
         item (pathlib.Path): The file path to check.
     Returns:
         str: The folder name where the file should be moved.
     """
-    mapping = {
-        ".jpg": "Images",
-        ".jpeg": "Images",
-        ".png": "Images",
-        ".pdf": "Documents",
-        ".docx": "Documents",
-        ".txt": "TextFiles"
-    }
-    extension = item.suffix.lower()
-    return mapping.get(extension)
+    return rules.get(item.suffix.lower())
     
-def organize_files(path,arg_dry_run=False):
+def organize_files(path,rules: dict, arg_dry_run=False):
     """Organize files in the specified directory into subfolders based on file type.
     Args:
         path (pathlib.Path): The directory path to organize.
@@ -36,7 +54,7 @@ def organize_files(path,arg_dry_run=False):
     
     for item in path.iterdir():
         if item.is_file():
-            folder_name= get_file_folder(item)
+            folder_name= get_file_folder(item,rules)
             if folder_name:
                 folder_path = path / folder_name
                 folder_path.mkdir(exist_ok=True)
@@ -62,10 +80,15 @@ def setup_parser():
 
 def main():
     """Main function to run the file organization script."""
+    
+    rules = load_rules('config.json') 
+    if not rules:
+        print("Halting due to configuration errors.")
+        return
     args = setup_parser().parse_args()
     path= pathlib.Path(args.source)
     try:
-        organize_files(path,args.dry_run)
+        organize_files(path,rules,args.dry_run)
         print("File organization complete.")
     except (FileNotFoundError, NotADirectoryError) as e:
         print(e)
