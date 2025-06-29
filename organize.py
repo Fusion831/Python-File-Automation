@@ -20,10 +20,11 @@ def get_file_folder(item):
     extension = item.suffix.lower()
     return mapping.get(extension)
     
-def organize_files(path):
+def organize_files(path,arg_dry_run=False):
     """Organize files in the specified directory into subfolders based on file type.
     Args:
         path (pathlib.Path): The directory path to organize.
+        arg_dry_run (bool): If True, perform a dry run without moving files.
         Raises:
             FileNotFoundError: If the specified path does not exist.
             NotADirectoryError: If the specified path is not a directory.
@@ -40,8 +41,11 @@ def organize_files(path):
                 folder_path = path / folder_name
                 folder_path.mkdir(exist_ok=True)
                 try:
-                    shutil.move(str(item), str(folder_path / item.name))
-                    print(f"Moved {item.name} to {folder_name} folder.")
+                    if arg_dry_run:
+                        print(f"Dry run: {item.name} would be moved to {folder_name} folder.")
+                    else:
+                        shutil.move(str(item), str(folder_path / item.name))
+                        print(f"Moved {item.name} to {folder_name} folder.")
                 except Exception as e:
                     print(f"Error moving {item.name}: {e}")
         else:
@@ -51,6 +55,8 @@ def setup_parser():
     """Set up the command line argument parser."""
     parser= argparse.ArgumentParser(description="Organize files in a directory into subfolders based on file type.")
     parser.add_argument("source", help="The directory path to organize.")
+    parser.add_argument("-dy","--dry-run",action="store_true",
+                        help="Perform a dry run without moving files.")
     return parser
 
 
@@ -59,7 +65,7 @@ def main():
     args = setup_parser().parse_args()
     path= pathlib.Path(args.source)
     try:
-        organize_files(path)
+        organize_files(path,args.dry_run)
         print("File organization complete.")
     except (FileNotFoundError, NotADirectoryError) as e:
         print(e)
