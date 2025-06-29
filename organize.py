@@ -1,6 +1,6 @@
 import pathlib
 import shutil
-
+import argparse
 
 def get_file_folder(item):
     """Determine the folder name based on the file extension.
@@ -47,13 +47,17 @@ def organize_files(path):
         else:
             print(f"{item.name} is not a file, skipping.")
 
-
-
+def setup_parser():
+    """Set up the command line argument parser."""
+    parser= argparse.ArgumentParser(description="Organize files in a directory into subfolders based on file type.")
+    parser.add_argument("source", help="The directory path to organize.")
+    return parser
 
 
 def main():
     """Main function to run the file organization script."""
-    path = pathlib.Path(input("Enter the directory path to organize: "))
+    args = setup_parser().parse_args()
+    path= pathlib.Path(args.source)
     try:
         organize_files(path)
         print("File organization complete.")
