@@ -44,7 +44,7 @@ def organize_files(path,arg_dry_run=False):
                     if arg_dry_run:
                         print(f"Dry run: {item.name} would be moved to {folder_name} folder.")
                     else:
-                        shutil.move(str(item), str(folder_path / item.name))
+                        shutil.move(str(item), str(folder_path))
                         print(f"Moved {item.name} to {folder_name} folder.")
                 except Exception as e:
                     print(f"Error moving {item.name}: {e}")
@@ -55,7 +55,7 @@ def setup_parser():
     """Set up the command line argument parser."""
     parser= argparse.ArgumentParser(description="Organize files in a directory into subfolders based on file type.")
     parser.add_argument("source", help="The directory path to organize.")
-    parser.add_argument("-dy","--dry-run",action="store_true",
+    parser.add_argument("-d","--dry-run",action="store_true",
                         help="Perform a dry run without moving files.")
     return parser
 
@@ -69,3 +69,8 @@ def main():
         print("File organization complete.")
     except (FileNotFoundError, NotADirectoryError) as e:
         print(e)
+        
+        
+
+if __name__ == "__main__":
+    main()
