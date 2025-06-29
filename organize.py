@@ -2,6 +2,7 @@ import pathlib
 import shutil
 import argparse
 import json
+import logging 
 
 
 
@@ -16,10 +17,10 @@ def load_rules(config_path: str) -> dict:
         with open(config_path, 'r') as file:
             rules = json.load(file)
     except FileNotFoundError:
-        print(f"Configuration file {config_path} not found. Using default rules.")
+        logging.error(f"Configuration file {config_path} not found. Using default rules.")
         return {}
     except json.JSONDecodeError:
-        print(f"Error decoding JSON from {config_path}. Using default rules.")
+        logging.error(f"Error decoding JSON from {config_path}. Using default rules.")
         return {}
     #Inverting the rules to a mapping of extensions to folder names
     inverted_rules = {}
@@ -60,14 +61,14 @@ def organize_files(path,rules: dict, arg_dry_run=False):
                 folder_path.mkdir(exist_ok=True)
                 try:
                     if arg_dry_run:
-                        print(f"Dry run: {item.name} would be moved to {folder_name} folder.")
+                        logging.info(f"Dry run: {item.name} would be moved to {folder_name} folder.")
                     else:
                         shutil.move(str(item), str(folder_path))
-                        print(f"Moved {item.name} to {folder_name} folder.")
+                        logging.info(f"Moved {item.name} to {folder_name} folder.")
                 except Exception as e:
-                    print(f"Error moving {item.name}: {e}")
+                    logging.error(f"Error moving {item.name}: {e}")
         else:
-            print(f"{item.name} is not a file, skipping.")
+            logging.info(f"Skipping non-file: {item.name}")
 
 def setup_parser():
     """Set up the command line argument parser."""
@@ -75,23 +76,41 @@ def setup_parser():
     parser.add_argument("source", help="The directory path to organize.")
     parser.add_argument("-d","--dry-run",action="store_true",
                         help="Perform a dry run without moving files.")
+    parser.add_argument("-c", "--config", default="config.json",
+                        help="Path to the JSON configuration file (default: config.json).")
     return parser
 
 
 def main():
     """Main function to run the file organization script."""
+    logging.basicConfig(
+        level=logging.INFO, 
+        format="%(asctime)s [%(levelname)s] - %(message)s", 
+        handlers=[
+            logging.FileHandler("organizer.log"), 
+            logging.StreamHandler() 
+        ]
+    )
+    logging.info("--- Starting File Organizer Script ---")
     
-    rules = load_rules('config.json') 
+    
+    args = setup_parser().parse_args()
+    rules = load_rules(args.config) 
     if not rules:
         print("Halting due to configuration errors.")
         return
-    args = setup_parser().parse_args()
     path= pathlib.Path(args.source)
     try:
-        organize_files(path,rules,args.dry_run)
-        print("File organization complete.")
+        source_path = pathlib.Path(args.source)
+        if not source_path.exists():
+            raise FileNotFoundError(f"The source directory '{source_path}' does not exist.")
+        
+        organize_files(source_path, rules, args.dry_run)
+        logging.info("--- File organization complete. ---")
     except (FileNotFoundError, NotADirectoryError) as e:
-        print(e)
+        logging.critical(f"A critical error occurred: {e}")
+    except Exception:
+        logging.critical("An unexpected error occurred.", exc_info=True)
         
         
 
